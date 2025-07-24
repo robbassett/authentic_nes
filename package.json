@@ -1,8 +1,9 @@
 {
-  "name": "vite-min-template",
+  "name": "immersive-nes",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
+  "homepage": "https://robbassett.github.io/immersive-nes/",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -16,6 +17,7 @@
     "jsnes": "^1.2.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "ringbufferjs": "^2.0.0",
     "usedosbox": "^1.0.12"
   },
   "devDependencies": {

@@ -1,6 +1,8 @@
 import { useDisclosure } from '@mantine/hooks';
-import { AppShell, Burger, Group, Skeleton, Text } from '@mantine/core';
+import { AppShell, Burger, Group, Text } from '@mantine/core';
 import { ReactNode } from 'react';
+
+import { GameShelf } from '../components/GameShelf';
 
 const Logo = () => (
   <svg 
@@ -33,12 +35,7 @@ export function BasicAppShell({main}: {main: ReactNode}) {
         </Group>
       </AppShell.Header>
       <AppShell.Navbar p="md">
-        Navbar
-        {Array(15)
-          .fill(0)
-          .map((_, index) => (
-            <Skeleton key={index} h={28} mt="sm" animate={false} />
-          ))}
+        <GameShelf/>
       </AppShell.Navbar>
       <AppShell.Main style={{height: "calc(100vh - 60px)", display:'flex', flexDirection:'column', overflow: 'hidden'}}>{main}</AppShell.Main>
     </AppShell>

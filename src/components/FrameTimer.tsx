@@ -10,6 +10,7 @@ interface FrameTimerProps {
 export interface FrameTimerRef {
     start: () => void;
     stop: () => void;
+    generateFrame: () => void;
 }
 
 const FrameTimer = forwardRef<FrameTimerRef, FrameTimerProps>(({ onGenerateFrame, onWriteFrame }, ref) => {
@@ -67,7 +68,6 @@ const FrameTimer = forwardRef<FrameTimerRef, FrameTimerProps>(({ onGenerateFrame
                 generateFrame();
             }, (i * timeToNextFrame) / numFrames);
         }
-        if (numFrames > 1) console.log("SKIP", numFrames - 1, lastFrameTimeRef.current);
     }, [requestAnimationFrame, generateFrame, onWriteFrame]);
 
     const start = useCallback(() => {
@@ -85,8 +85,9 @@ const FrameTimer = forwardRef<FrameTimerRef, FrameTimerProps>(({ onGenerateFrame
 
     useImperativeHandle(ref, () => ({
         start,
-        stop
-    }), [start, stop]);
+        stop,
+        generateFrame
+    }), [start, stop, generateFrame]);
 
     return null;
 });

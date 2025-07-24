@@ -1,5 +1,5 @@
 // Imports
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { useEffect, useCallback, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { Container, Image } from '@mantine/core';
 
 import CRT, { CRTRef } from './CRT';
@@ -9,42 +9,43 @@ import { NES } from 'jsnes';
 import loadBinary from './utils';
 import FrameTimer, { FrameTimerRef } from './FrameTimer';
 import KeyboardController from './Controller';
+import Speakers, { SpeakersRef } from './Speakers';
 
-// Define the missing functions
-const handleLoaded = (): void => {
-    console.log('ROM loaded successfully');
-};
-
-const handleProgress = (): void => {
-    console.log('Loading ROM...');
-};
-
-let ROMBinary: string | null = null;
-
-// Load the ROM binary
-loadBinary(
-    'owlia.nes',
-    (err: Error | null, data?: string) => {
-        if (err) {
-            console.log('Error loading ROM:', err);
-        } else {
-            ROMBinary = data || null;
-            handleLoaded();
-        }
-    },
-    handleProgress
-);
+export interface EmulatorRef {
+    handleRom: (rom:string) => void;
+}
 
 // --- Emulator Functional Component ---
 // This component orchestrates the NES emulator and its input.
-export const Emulator = () => {
+export const Emulator = forwardRef<EmulatorRef, {}>(({}, ref) => {
     // useRef to store the NES emulator instance.
     // This allows the instance to persist across renders without being re-created.
     const nesRef = useRef<NES | null>(null);
+    const speakersRef = useRef<SpeakersRef | null>(null);
     const frameTimerRef = useRef<FrameTimerRef | null>(null);
     const crtRef = useRef<CRTRef | null>(null);
     const controllerRef = useRef<KeyboardController | null>(null);
     const [romLoaded, setRomLoaded] = useState(false);
+    const [ROMBinary, setROMBinary] = useState<string | null>(null);
+
+    // Rom loading function
+    const handleRom = (rom:string) => {
+        console.log(rom);
+        // Reset romLoaded state to allow loading new ROM
+        setRomLoaded(false);
+        
+        loadBinary(
+            rom,
+            (err: Error | null, data?: string) => {
+                if (err) {
+                    console.log('Error loading ROM:', err);
+                } else {
+                    const rb = data || null;
+                    setROMBinary(rb);
+                }
+            }
+        )
+    };
 
     // Frame handling functions
     const setBuffer = useCallback((buffer: number[]) => {
@@ -59,13 +60,33 @@ export const Emulator = () => {
         }
     }, []);
 
+    // Audio handling function
+    function onBufferUnderrun(actualSize: number, desiredSize: number) {
+        let frameTimer = frameTimerRef.current;
+        if (frameTimer) {
+            frameTimer.generateFrame();
+            let speakers = speakersRef.current;
+            if (speakers) {
+                if (speakers.buffer.size() < desiredSize) {
+                    frameTimer.generateFrame();
+                }
+            }
+        }
+    }
+
     // useEffect hook for component mounting logic.
     useEffect(() => {
         // Initialize the NES emulator instance.
         if (!nesRef.current) {
             nesRef.current = new NES({
                 onFrame: setBuffer,
-                onStatusUpdate: console.log
+                onStatusUpdate: console.log,
+                onAudioSample: (left: number, right: number) => {
+                    if (speakersRef.current) {
+                        speakersRef.current.writeSample(left, right);
+                    }
+                },
+                sampleRate: speakersRef.current?.getSampleRate() || 44100
             });
         }
 
@@ -82,15 +103,25 @@ export const Emulator = () => {
             controllerRef.current.addEventListeners();
         }
 
+        // Check if a ROMBinary is parsed, if not parse a default
+        if (!ROMBinary) {
+            handleRom("dushlan.nes");
+        }
+
         // Check if ROM is loaded and load it
         const checkAndLoadROM = () => {
             if (ROMBinary && nesRef.current && !romLoaded) {
                 nesRef.current.loadROM(ROMBinary);
                 setRomLoaded(true);
                 
-                // Start the frame timer once ROM is loaded
+                // Start the frame timer and audio once ROM is loaded
                 if (frameTimerRef.current) {
                     frameTimerRef.current.start();
+                }
+                
+                // Start audio
+                if (speakersRef.current) {
+                    speakersRef.current.start();
                 }
             }
         };
@@ -110,21 +141,25 @@ export const Emulator = () => {
         // Cleanup function for when the component unmounts.
         // This is crucial for releasing resources held by the emulator.
         return () => {
-            // Remove controller event listeners
-            // if (controllerRef.current) {
-            //     controllerRef.current.removeEventListeners();
-            // }
-            
             // Stop frame timer
             if (frameTimerRef.current) {
                 frameTimerRef.current.stop();
+            }
+            
+            // Stop audio
+            if (speakersRef.current) {
+                speakersRef.current.stop();
             }
             
             if (nesRef.current && typeof nesRef.current.destroy === 'function') {
                 nesRef.current.destroy(); 
             }
         };
-    }, [setBuffer]); // Empty dependency array means this effect runs only once on mount.
+    }, [setBuffer, ROMBinary]);
+
+    useImperativeHandle(ref, () => ({
+        handleRom
+    }), [handleRom]);
 
     // Render the CRT component with FrameTimer.
     return (
@@ -144,7 +179,7 @@ export const Emulator = () => {
             }}
         >
             <Image
-                src='/crt2.png'
+                src='crt2.png'
                 style={{
                     width: 'auto', 
                     height: '100%', 
@@ -154,7 +189,23 @@ export const Emulator = () => {
                     zIndex: 1000
                 }}
             />
+            <Image
+                src='black.png'
+                style={{
+                    width: 'auto', 
+                    height: '90%', 
+                    objectFit: 'contain',
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    position: 'absolute'
+                }}
+            />
             <CRT ref={crtRef} />
+            <Speakers
+                ref={speakersRef}
+                bufferSize={1024}
+                onBufferUnderrun={onBufferUnderrun}
+            />
             <FrameTimer
                 ref={frameTimerRef}
                 onGenerateFrame={() => nesRef.current?.frame()}
@@ -162,4 +213,4 @@ export const Emulator = () => {
             />
         </Container>
     );
-};
+});
