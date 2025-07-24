@@ -61,7 +61,7 @@ export const Emulator = forwardRef<EmulatorRef, {}>(({}, ref) => {
     }, []);
 
     // Audio handling function
-    function onBufferUnderrun(actualSize: number, desiredSize: number) {
+    function onBufferUnderrun(desiredSize: number) {
         let frameTimer = frameTimerRef.current;
         if (frameTimer) {
             frameTimer.generateFrame();

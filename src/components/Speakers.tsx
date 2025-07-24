@@ -4,7 +4,7 @@ import RingBuffer from 'ringbufferjs';
 
 interface SpeakersProps {
     bufferSize: number;
-    onBufferUnderrun: (actualSize: number, desiredSize: number) => void;
+    onBufferUnderrun: (desiredSize: number) => void;
 }
 
 export interface SpeakersRef {
@@ -71,7 +71,7 @@ const Speakers = forwardRef<SpeakersRef, SpeakersProps>(({bufferSize, onBufferUn
         let buffer = bufferRef.current;
          // We're going to buffer underrun. Attempt to fill the buffer.
         if (buffer.size() < size * 2 && onBufferUnderrun) {
-            onBufferUnderrun(buffer.size(), size * 2);
+            onBufferUnderrun(size * 2);
         }
 
         try {
