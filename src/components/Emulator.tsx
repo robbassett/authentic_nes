@@ -203,7 +203,7 @@ export const Emulator = forwardRef<EmulatorRef, {}>(({}, ref) => {
             <CRT ref={crtRef} />
             <Speakers
                 ref={speakersRef}
-                bufferSize={1024}
+                bufferSize={2048}
                 onBufferUnderrun={onBufferUnderrun}
             />
             <FrameTimer
